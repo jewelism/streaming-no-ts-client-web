@@ -1,24 +1,55 @@
-import React from 'react';
-import logo from './logo.svg';
+import React, { useState } from 'react';
+import io from 'socket.io-client';
 import './App.css';
 
 function App() {
+  const [ws, setWs] = useState();
+  const [isConnected, setIsConnected] = useState<boolean>(false);
+  const [myMessageInput, setMyMessageInput] = useState<string>('');
+  const [messages, setMessages] = useState<string[]>([]);
+  const [exceptionMessage, setExceptionMessage] = useState<string>('');
+
+
+  const onClickConnect = () => {
+    const socket = io('http://localhost:3001');
+    socket.on('connect', () => {
+      setIsConnected(true);
+    });
+    socket.on('message', (data: any) => {
+      setMessages([...messages, data]);
+    });
+    socket.on('exception', (data: any) => {
+      setExceptionMessage(data);
+    });
+    socket.on('disconnect', () => {
+      setExceptionMessage('Disconnected');
+    });
+    setWs(socket);
+  }
+
+  const onChangeMessage = ({target: {value}}: any) => setMyMessageInput(value);
+  const onClickSendMessage = () => {
+    ws.emit('message', myMessageInput, 
+    // (response: string) => {
+    //   console.log(response);
+    // }
+    );
+    setMessages([...messages, myMessageInput]);
+  };
+
   return (
     <div className="App">
-      <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.tsx</code> and save to reload.
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
-      </header>
+      {!isConnected && <button onClick={onClickConnect}>connect</button>}
+      {exceptionMessage}
+      {isConnected &&
+        <>
+          <input type="text" value={myMessageInput} onChange={onChangeMessage}/>
+          <button onClick={onClickSendMessage}>send</button>
+          <div>
+            {messages.map((message, index) => <div key={index}>{message}</div>)}
+          </div>
+        </>
+      }
     </div>
   );
 }
