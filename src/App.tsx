@@ -27,7 +27,8 @@ function App() {
   });
 
   const onClickConnect = () => {
-    const socket = io('http://localhost:3001');
+    const socket = io('http://boseok.iptime.org:3001');
+    
     socket.on('connect', () => {
       setIsConnected(true);
     });
@@ -50,6 +51,7 @@ function App() {
       //   console.log(response);
       // }
     );
+    setMyMessageInput('');
     setMessages([...messages, myMessageInput]);
   };
 
