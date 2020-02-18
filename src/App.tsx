@@ -56,7 +56,6 @@ function App() {
       //   console.log(response);
       // }
     );
-<<<<<<< HEAD
     setMessages(msgs => [...msgs, myMessageInput]);
     setMyMessageInput('');
   }, [ws, myMessageInput]);
@@ -68,11 +67,6 @@ function App() {
       document.removeEventListener('keydown', enterHandler);
     };
   });
-=======
-    setMyMessageInput('');
-    setMessages([...messages, myMessageInput]);
-  };
->>>>>>> master
 
   return (
     <div className="App">
