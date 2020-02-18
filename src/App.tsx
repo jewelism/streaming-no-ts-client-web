@@ -28,7 +28,7 @@ function App() {
   }, []);
 
   const onClickConnect = useCallback(() => {
-    const socket = io('http://localhost:3002/chat');
+    const socket = io('http://boseok.iptime.org:3002/chat');
     
     socket.on('connect', () => {
       setIsConnected(true);
