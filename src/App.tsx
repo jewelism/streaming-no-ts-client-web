@@ -1,88 +1,134 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import io from 'socket.io-client';
-import './App.css';
+import { IMember, IMessage, IRoom } from './types';
+import Message from './components/Message';
+import Room from './components/Room';
+import Members from './components/Members';
 
 function App() {
-  const submitButtonEl = useRef(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [ws, setWs] = useState();
-  // const [rooms, setRooms] = useState<string[]>([]);
-  const [rooms, setRooms] = useState<string[]>(['room1', 'room2', 'room3']);
+  const [rooms, setRooms] = useState<string[]>([]);
   const [selectedRoom, setSelectedRoom] = useState<string>('');
   const [isConnected, setIsConnected] = useState<boolean>(false);
+  const [members, setMembers] = useState<IMember[]>([]);
   const [myMessageInput, setMyMessageInput] = useState<string>('');
-  const [messages, setMessages] = useState<string[]>([]);
+  const [messages, setMessages] = useState<IMessage[]>([]);
   const [exceptionMessage, setExceptionMessage] = useState<string>('');
 
+  const socketId = ws?.id; //cant useMemo
 
-  const enterHandler = useCallback((e: any) => {
-    if (e.code === 'Enter') {
-      // DOM document.querySelector('button')?.click();
-      // react js submitButtonEl.current?.click();
-      // react ts
-      (submitButtonEl.current as unknown as HTMLElement)?.click();
-    }
+  const addMessage = useCallback((message: IMessage) => setMessages(prevState => [...prevState, message]), []);
+  const addNewMember = useCallback((newMember: IMember) => {
+    console.log('newMember', newMember);
+    setMembers(prev => {
+      console.log('prev', prev);
+      return [...prev, newMember]
+    });
   }, []);
-
-  const onReceiveMessage = useCallback((message: string) => {
-    setMessages(msgs => [...msgs, message]);
-  }, []);
-
   const onClickConnect = useCallback(() => {
-    const socket = io('http://boseok.iptime.org:3002/chat');
-    
+    setExceptionMessage('');
+    // const socket = io('//boseok.iptime.org:3002/chat');
+    const socket = io('//localhost:3002/chat');
     socket.on('connect', () => {
       setIsConnected(true);
     });
-    socket.on('message', onReceiveMessage);
+    socket.on('message', addMessage);
+    socket.on('newClient', addNewMember);
     socket.on('exception', (data: any) => {
-      setExceptionMessage(data);
+      // console.log('exception data', data);
+      setExceptionMessage('some server error !');
     });
     socket.on('disconnect', () => {
-      setExceptionMessage('Disconnected');
+      setExceptionMessage('Disconnected !');
     });
     setWs(socket);
-  }, [onReceiveMessage]);
-
-  const onClickJoinRoom = useCallback((roomId) => {
-    ws.emit('room', roomId);
+  }, [addMessage, addNewMember]);
+  const onClickJoinRoom = useCallback((roomId, nickname) => {
+    const room: IRoom = {
+      socketId,
+      roomId,
+      nickname: nickname || socketId,
+    };
+    ws.emit('room', room, setMembers);
     setSelectedRoom(roomId);
     setRooms([]);
-  }, [ws])
-
-  const onChangeMessage = useCallback(({ target: { value } }: any) => setMyMessageInput(value), []);
+  }, [socketId, ws]);
+  const onChangeMessage = useCallback((e: any) => {
+    setMyMessageInput(e.target.value)
+  }, []);
   const onClickSendMessage = useCallback(() => {
-    ws.emit('message', { roomId: selectedRoom, message: myMessageInput },
-      // (response: string) => {
-      //   console.log(response);
-      // }
-    );
-    setMessages(msgs => [...msgs, myMessageInput]);
+    ws.emit('message', {
+      date: Date.now(),
+      senderId: socketId,
+      roomId: selectedRoom,
+      text: myMessageInput
+    });
+    addMessage({ mine: true, senderId: '', date: Date.now(), text: myMessageInput });
     setMyMessageInput('');
-  }, [ws, myMessageInput]);
+  }, [ws, socketId, selectedRoom, myMessageInput, addMessage]);
+  const handleEnter = useCallback(
+    e => {
+      if (!isSubmitting && myMessageInput) {
+        if (e.key === "Enter") {
+          onClickSendMessage();
+          setIsSubmitting(s => !s);
+          setTimeout(() => {
+            setIsSubmitting(s => !s);
+            setMyMessageInput("");
+          }, 100);
+        }
+      }
+    },
+    [isSubmitting, myMessageInput, onClickSendMessage]
+  );
+  const onClickDisconnect = useCallback(() => {
+    setSelectedRoom('');
+    setIsConnected(false);
+    ws?.close?.();
+  }, [ws]);
 
   useEffect(() => {
-    // fetch('~').then(res => res.json()).then(setRooms);
-    document.addEventListener('keydown', enterHandler);
+    fetch('//localhost:3001/chat/rooms').then(res => res.json()).then(setRooms);
+  }, []);
+
+  useEffect(() => {
     return () => {
-      document.removeEventListener('keydown', enterHandler);
+      onClickDisconnect();
     };
-  });
+  }, [onClickDisconnect, ws]);
 
   return (
     <div className="App">
-      {!isConnected && <button type="submit" ref={submitButtonEl} onClick={onClickConnect}>connect</button>}
       <div>{exceptionMessage}</div>
-      {selectedRoom && <div>roomId => {selectedRoom}</div>}
-      {isConnected &&
+      {isConnected ?
         <>
-          {!selectedRoom && rooms.map(roomId => <button type="button" key={roomId} onClick={() => onClickJoinRoom(roomId)}>join {roomId}</button>)}
-          <input type="text" value={myMessageInput} onChange={onChangeMessage} />
-          <button type="submit" ref={submitButtonEl} onClick={onClickSendMessage}>send</button>
-          <div>
-            {messages.map((message, index) => <div key={message + index}>{message}</div>)}
-          </div>
+          {selectedRoom ?
+            <>
+              <div>roomId => {selectedRoom}</div>
+              <button type="button" onClick={onClickDisconnect}>disconnect</button>
+              <Members members={members} />
+              <Message members={members} messages={messages} />
+              <MessageForm value={myMessageInput} onChange={onChangeMessage} onKeyDown={handleEnter} onClickSubmit={onClickSendMessage} />
+            </>
+            :
+            <Room rooms={rooms} onClickJoin={onClickJoinRoom} />
+          }
         </>
+        :
+        <button type="submit" onClick={onClickConnect}>connect</button>
       }
+    </div>
+  );
+}
+
+function MessageForm({ value, onChange, onKeyDown, onClickSubmit }
+  : { value: string, onChange: any, onKeyDown: any, onClickSubmit: any }
+) {
+  return (
+    <div>
+      <input type="text" value={value} onChange={onChange} onKeyDown={onKeyDown} />
+      <button type="button" onClick={onClickSubmit}>send</button>
     </div>
   );
 }
