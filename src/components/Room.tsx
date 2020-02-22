@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 
 interface IRoomProps {
   rooms: string[];
@@ -7,9 +7,16 @@ interface IRoomProps {
 function Room({ rooms, onClickJoin }: IRoomProps) {
   const [myNickname, setMyNickname] = useState<string>('');
 
+  const isRoomExist = useMemo(() => !!rooms.length, [rooms]);
   return (
     <>
-      <input value={myNickname} onChange={e => setMyNickname(e.target.value)} placeholder="your nickname" />
+      <div>join rooms!</div>
+      {isRoomExist ?
+        <input value={myNickname} onChange={e => setMyNickname(e.target.value)} placeholder="your nickname" />
+        :
+        <div>no rooms!</div>
+      }
+      <br />
       {rooms.map(roomId => <RoomItem key={roomId} roomId={roomId} onClick={() => onClickJoin(roomId, myNickname)} />)}
     </>
   );

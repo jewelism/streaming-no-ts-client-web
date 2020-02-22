@@ -4,12 +4,15 @@ import { IMember, IMessage, IRoom } from './types';
 import Message from './components/Message';
 import Room from './components/Room';
 import Members from './components/Members';
+import CreateRoom from './components/CreateRoom';
 
 const {
   REACT_APP_BASE_URL: BASE_URL,
   REACT_APP_API_PORT: API_PORT,
   REACT_APP_SOCKET_PORT: SOCKET_PORT
 } = process.env;
+
+export const CHAT_API_URL = `${BASE_URL}:${API_PORT}/chat/`;
 
 function App() {
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -32,11 +35,17 @@ function App() {
       return [...prev, newMember]
     });
   }, []);
+  const getRooms = useCallback(() => {
+    fetch(`${CHAT_API_URL}rooms`).then(res => res.json()).then(setRooms);
+  }, []);
   const onClickConnect = useCallback(() => {
+    getRooms();
     setExceptionMessage('');
     const socket = io(`${BASE_URL}:${SOCKET_PORT}/chat`);
     socket.on('connect', () => {
+
       setIsConnected(true);
+      
     });
     socket.on('message', addMessage);
     socket.on('newClient', addNewMember);
@@ -48,7 +57,7 @@ function App() {
       setExceptionMessage('Disconnected !');
     });
     setWs(socket);
-  }, [addMessage, addNewMember]);
+  }, [addMessage, addNewMember, getRooms]);
   const onClickJoinRoom = useCallback((roomId, nickname) => {
     const room: IRoom = {
       socketId,
@@ -94,10 +103,6 @@ function App() {
   }, [ws]);
 
   useEffect(() => {
-    fetch(`${BASE_URL}:${API_PORT}/chat/rooms`).then(res => res.json()).then(setRooms);
-  }, []);
-
-  useEffect(() => {
     return () => {
       onClickDisconnect();
     };
@@ -117,7 +122,10 @@ function App() {
               <MessageForm value={myMessageInput} onChange={onChangeMessage} onKeyDown={handleEnter} onClickSubmit={onClickSendMessage} />
             </>
             :
-            <Room rooms={rooms} onClickJoin={onClickJoinRoom} />
+            <>
+              <Room rooms={rooms} onClickJoin={onClickJoinRoom} />
+              <CreateRoom getRooms={getRooms}/>
+            </>
           }
         </>
         :
