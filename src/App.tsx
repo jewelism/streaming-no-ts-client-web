@@ -5,6 +5,12 @@ import Message from './components/Message';
 import Room from './components/Room';
 import Members from './components/Members';
 
+const {
+  REACT_APP_BASE_URL: BASE_URL,
+  REACT_APP_API_PORT: API_PORT,
+  REACT_APP_SOCKET_PORT: SOCKET_PORT
+} = process.env;
+
 function App() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [ws, setWs] = useState();
@@ -29,7 +35,7 @@ function App() {
   const onClickConnect = useCallback(() => {
     setExceptionMessage('');
     // const socket = io('//boseok.iptime.org:3002/chat');
-    const socket = io('//localhost:3002/chat');
+    const socket = io(`//${BASE_URL}:${SOCKET_PORT}/chat`);
     socket.on('connect', () => {
       setIsConnected(true);
     });
@@ -89,7 +95,7 @@ function App() {
   }, [ws]);
 
   useEffect(() => {
-    fetch('//localhost:3001/chat/rooms').then(res => res.json()).then(setRooms);
+    fetch(`//${BASE_URL}:${API_PORT}/chat/rooms`).then(res => res.json()).then(setRooms);
   }, []);
 
   useEffect(() => {
