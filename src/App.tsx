@@ -34,8 +34,7 @@ function App() {
   }, []);
   const onClickConnect = useCallback(() => {
     setExceptionMessage('');
-    // const socket = io('//boseok.iptime.org:3002/chat');
-    const socket = io(`//${BASE_URL}:${SOCKET_PORT}/chat`);
+    const socket = io(`${BASE_URL}:${SOCKET_PORT}/chat`);
     socket.on('connect', () => {
       setIsConnected(true);
     });
@@ -95,7 +94,7 @@ function App() {
   }, [ws]);
 
   useEffect(() => {
-    fetch(`//${BASE_URL}:${API_PORT}/chat/rooms`).then(res => res.json()).then(setRooms);
+    fetch(`${BASE_URL}:${API_PORT}/chat/rooms`).then(res => res.json()).then(setRooms);
   }, []);
 
   useEffect(() => {
